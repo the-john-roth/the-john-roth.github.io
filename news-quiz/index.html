@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Nebraskan News Quiz</title>
+    <style>
+        /* Basic styling for the app */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            color: #d00000; /* Daily Nebraskan Red */
+            text-align: center;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        /* Main quiz container */
+        #app-container {
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 600px;
+            overflow: hidden;
+            padding: 20px 30px;
+        }
+
+        /* Question text */
+        #question-text {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        #question-header {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        /* Answer options */
+        #answer-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .option-btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            font-size: 1rem;
+            font-weight: 500;
+            text-align: left;
+            background-color: #f9f9f9;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .option-btn:not(:disabled):hover {
+            background-color: #f0f0f0;
+            border-color: #c0c0c0;
+        }
+
+        .option-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+
+        /* Feedback styling */
+        .option-btn.correct {
+            background-color: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+            font-weight: 700;
+        }
+
+        .option-btn.incorrect {
+            background-color: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+            font-weight: 700;
+        }
+
+        #feedback {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            display: none; /* Hidden by default */
+        }
+
+        #feedback.correct {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        #feedback.incorrect {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Next/Restart buttons */
+        #next-btn, #restart-btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+            background-color: #d00000;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background-color 0.2s ease;
+        }
+
+        #next-btn:hover, #restart-btn:hover {
+            background-color: #a00000;
+        }
+
+        #next-btn {
+            display: none; /* Hidden by default */
+        }
+
+        /* Results screen */
+        #results-container {
+            text-align: center;
+        }
+
+        #score-text {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        /* Utility class to hide elements */
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <h1>Daily Nebraskan News Quiz</h1>
+
+        <div id="quiz-container">
+            <div id="question-header"></div>
+            <div id="question-text"></div>
+            <div id="answer-options"></div>
+            <div id="feedback"></div>
+            <button id="next-btn">Next Question</button>
+        </div>
+
+        <div id="results-container" class="hidden">
+            <div id="score-text"></div>
+            <button id="restart-btn">Try Again</button>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. QUIZ DATA ---
+        // All 20 questions are stored here
+        const allQuestions = [
+            {
+              "questionNumber": 1,
+              "question": "True or False: A group of UNL professors is challenging a proposed $50 million budget cut.",
+              "answerOptions": [
+                {
+                  "text": "True",
+                  "rationale": "The proposed cut mentioned in the article is $27.5 million, not $50 million.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "False",
+                  "rationale": "The text states the proposed cut is $27.5 million.",
+                  "isCorrect": true
+                }
+              ],
+              "hint": "Check the specific dollar amount of the proposed cut mentioned at the beginning of the article."
+            },
+            {
+              "questionNumber": 2,
+              "question": "What is the name of the organization challenging the chancellor's proposed budget cut?",
+              "answerOptions": [
+                {
+                  "text": "The UNL Student Government",
+                  "rationale": "The article identifies a group of professors, not students, as the ones challenging the cut.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "The Board of Regents",
+                  "rationale": "The Board of Regents is mentioned as the body that makes the final decision, not the group challenging the cut.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "UNL’s chapter of the American Association of University Professors (AAUP)",
+                  "rationale": "The article explicitly names the UNL chapter of the AAUP as the group challenging the cut.",
+                  "isCorrect": true
+                },
+                {
+                  "text": "The Nebraska Legislature",
+                  "rationale": "The Legislature is mentioned in relation to state appropriations, not as the group challenging the internal UNL cut.",
+                  "isCorrect": false
+                }
+              ],
+              "hint": "The group is an association of professors and cited a report from one of its analysts."
+            },
+            {
+              "questionNumber": 3,
+              "question": "According to the AAUP report, what is the university's S&P Global bond rating?",
+              "answerOptions": [
+                {
+                  "text": "AA",
+                  "rationale": "The article states the university system has an 'AA' bond rating, the second highest.",
+                  "isCorrect": true
+                },
+                {
+                  "text": "A",
+                  "rationale": "The article specifies 'AA', which is the second-highest rating.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "BBB",
+                  "rationale": "The reported rating is much higher, placing it in the top 8% of higher education institutions.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "AAA",
+                  "rationale": "The article states the 'AA' rating is the *second highest*, implying 'AAA' is the highest.",
+                  "isCorrect": false
+                }
+              ],
+              "hint": "This rating is the second highest and places NU among the top 8% of higher education institutions."
+            },
+            {
+              "questionNumber": 4,
+              "question": "True or False: UNL officials claim the university's income has kept pace with rising costs.",
+              "answerOptions": [
+                {
+                  "text": "True",
+                  "rationale": "This is the opposite of their claim; they state income has *not* kept pace with costs.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "False",
+                  "rationale": "The article states, 'UNL officials have told the Daily Nebraskan that the university's income has not kept pace with rising operating costs and inflation'.",
+                  "isCorrect": true
+                }
+              ],
+              "hint": "Review the university's official position on income versus operating costs."
+            },
+            {
+              "questionNumber": 5,
+              "question": "A fire was reported in the laundry room of which UNL residence hall?",
+              "answerOptions": [
+                {
+                  "text": "Abel Hall",
+                  "rationale": "The article does not mention Abel Hall.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "Sandoz Hall",
+                  "rationale": "The article does not mention Sandoz Hall.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "The Courtyards",
+                  "rationale": "The text explicitly states the fire was in a third-floor laundry room at The Courtyards.",
+                  "isCorrect": true
+                },
+                {
+                  "text": "Neihardt Hall",
+                  "rationale": "The article does not mention Neihardt Hall.",
+                  "isCorrect": false
+                }
+              ],
+              "hint": "This incident occurred just before noon on a Monday."
+            },
+            {
+              "questionNumber": 6,
+              "question": "Between fiscal years 2016 and 2026, which area of NU's spending saw a larger percentage increase?",
+              "answerOptions": [
+                {
+                  "text": "Instructional expenditures (30.3%)",
+                  "rationale": "Administrative spending increased by 53.1%, which is a larger percentage than instructional spending.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "Administrative spending (53.1%)",
+                  "rationale": "The report found administrative spending increased by 53.1%, while instructional expenditures rose by 30.3%.",
+                  "isCorrect": true
+                },
+                {
+                  "text": "Both increased by the same amount",
+                  "rationale": "The percentages reported in the article are different.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "The article does not compare these figures",
+                  "rationale": "The article directly compares the percentage increases for both spending categories.",
+                  "isCorrect": false
+                }
+              ],
+              "hint": "The AAUP report examines shifts in spending; one category grew by 53.1% and the other by 30.3%."
+            },
+            {
+              "questionNumber": 7,
+              "question": "True or False: Since 2019, the number of full-time instructional employees at UNL has increased by 7.8%.",
+              "answerOptions": [
+                {
+                  "text": "True",
+                  "rationale": "This is incorrect; the number of instructional employees *decreased* by 7.8%.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "False",
+                  "rationale": "The article states that full-time instructional employees have *decreased* by 7.8% since 2019.",
+                  "isCorrect": true
+                }
+              ],
+              "hint": "Pay close attention to whether the number of instructional employees increased or decreased."
+            },
+            {
+              "questionNumber": 8,
+              "question": "Which two programs is UNL planning to combine amid budget cuts?",
+              "answerOptions": [
+                {
+                  "text": "English and History",
+                  "rationale": "The article does not mention these departments.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "Journalism and Broadcasting",
+                  "rationale": "The article has a specific headline and section about combining journalism and broadcasting.",
+                  "isCorrect": true
+                },
+                {
+                  "text": "Physics and Astronomy",
+                  "rationale": "The article does not mention these departments.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "Music and Theatre",
+                  "rationale": "The article does not mention these departments.",
+                  "isCorrect": false
+                }
+              ],
+              "hint": "The affected programs are within the College of Journalism and Mass Communications."
+            },
+            {
+              "questionNumber": 9,
+              "question": "How many broadcasting professors are expected to retire from the College of Journalism and Mass Communications?",
+              "answerOptions": [
+                {
+                  "text": "One",
+                  "rationale": "The article names three professors who are retiring.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "Two",
+                  "rationale": "The article identifies three professors: Alloway, Lee, and McCoy.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "Three",
+                  "rationale": "The text names Alloway, Lee, and McCoy, stating 'a total of three professors retiring'.",
+                  "isCorrect": true
+                },
+                {
+                  "text": "None",
+                  "rationale": "The article explicitly states that three professors are retiring.",
+                  "isCorrect": false
+                }
+              ],
+              "hint": "The article names all the retiring professors from this major track."
+            },
+            {
+              "questionNumber": 10,
+              "question": "What reason did UNL officials give for the university's financial situation?",
+              "answerOptions": [
+                {
+                  "text": "Declining net tuition and stagnant state funding",
+                  "rationale": "UNL officials cited these two factors, plus rising costs and inflation.",
+                  "isCorrect": true
+                },
+                {
+                  "text": "A record-breaking increase in state funding",
+                  "rationale": "UNL officials described state funding as 'stagnant,' and the increase was less than requested.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "Massive investments in new sports facilities",
+                  "rationale": "This reason was not mentioned in the article.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "A 50% drop in student enrollment",
+                  "rationale": "The article mentions 'declining net tuition' but not a specific 50% drop in enrollment.",
+                  "isCorrect": false
+                }
+              ],
+              "hint": "The university's explanation contrasts with the AAUP's report of 'strong financial health'."
+            },
+            {
+              "questionNumber": 11,
+              "question": "True or False: According to a Flatwater Free Press report, NU now spends more on professors than on administrators.",
+              "answerOptions": [
+                {
+                  "text": "True",
+                  "rationale": "The report found the opposite: that NU spends more on administrators.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "False",
+                  "rationale": "The article cites a report finding that 'NU now spends more on administrators than on professors'.",
+                  "isCorrect": true
+                }
+              ],
+              "hint": "This finding is mentioned just before the university's non-response."
+            },
+            {
+              "questionNumber": 12,
+              "question": "Since 2019, how has the salary increase for non-instructional employees compared to inflation?",
+              "answerOptions": [
+                {
+                  "text": "It was much lower than inflation.",
+                  "rationale": "Salaries for non-instructional employees rose 31.7%, while inflation was around 26%.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "It was slightly higher than inflation.",
+                  "rationale": "The salary increase was 31.7%, while inflation was around 26% during the same period.",
+                  "isCorrect": true
+                },
+                {
+                  "text": "It was exactly the same as inflation.",
+                  "rationale": "The figures given are 31.7% for salaries and 'around 26%' for inflation.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "It was not mentioned in the article.",
+                  "rationale": "The article provides the numbers for both non-instructional salaries and inflation for this period.",
+                  "isCorrect": false
+                }
+              ],
+              "hint": "Compare the 31.7% salary increase to the inflation figure provided for the same period."
+            },
+            {
+              "questionNumber": 13,
+              "question": "How does the salary increase for *instructional* employees since 2019 compare to inflation?",
+              "answerOptions": [
+                {
+                  "text": "It was much lower than inflation.",
+                  "rationale": "Salaries for instructional employees rose only 4.5%, while inflation was around 26%.",
+                  "isCorrect": true
+                },
+                {
+                  "text": "It was slightly higher than inflation.",
+                  "rationale": "The 4.5% salary increase was significantly less than the 26% inflation rate.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "It was exactly the same as inflation.",
+                  "rationale": "The figures given are 4.5% for salaries and 'around 26%' for inflation.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "It was not mentioned in the article.",
+                  "rationale": "The article provides the numbers for both instructional salaries and inflation for this period.",
+                  "isCorrect": false
+                }
+              ],
+              "hint": "Compare the 4.5% salary increase to the inflation figure provided for the same period."
+            },
+            {
+              "questionNumber": 14,
+              "question": "True or False: The Nebraska Legislature approved the 3.5% increase in state appropriations that the Board of Regents requested.",
+              "answerOptions": [
+                {
+                  "text": "True",
+                  "rationale": "The Legislature approved a 1.25% increase, which was less than the 3.5% requested.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "False",
+                  "rationale": "The article states the Legislature approved a 1.25% increase, which was 'less than the 3.5% increase' requested.",
+                  "isCorrect": true
+                }
+              ],
+              "hint": "Compare the percentage requested by the Regents to the percentage that was approved."
+            },
+            {
+              "questionNumber": 15,
+              "question": "What is the total value of the NU system's investment, according to the AAUP?",
+              "answerOptions": [
+                {
+                  "text": "$27.5 million",
+                  "rationale": "This is the amount of the proposed budget cut, not the total investment.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "$75 million",
+                  "rationale": "This is the amount the university cut from its budget over the last five years.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "$8.7 million",
+                  "rationale": "This is the dollar amount of the 1.25% increase in state appropriations.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "Nearly $7 billion",
+                  "rationale": "The AAUP chapter pointed to this figure as a sign of strong financial health.",
+                  "isCorrect": true
+                }
+              ],
+              "hint": "The AAUP cited this large number, measured in billions, as a sign of financial strength."
+            },
+            {
+              "questionNumber": 16,
+              "question": "If the proposed cuts are approved, how many full-time faculty positions in impacted programs would be eliminated?",
+              "answerOptions": [
+                {
+                  "text": "6",
+                  "rationale": "The article states six *programs* are proposed to be cut, not six faculty positions.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "58",
+                  "rationale": "The article states the university would eliminate '58 full-time faculty positions'.",
+                  "isCorrect": true
+                },
+                {
+                  "text": "70",
+                  "rationale": "This is the number of faculty expected to retire through a buyout, in addition to the eliminations.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "3",
+                  "rationale": "This is the number of broadcasting professors retiring, which is separate from this figure.",
+                  "isCorrect": false
+                }
+              ],
+              "hint": "This number is in addition to the approximately 70 faculty members who would retire through a buyout."
+            },
+            {
+              "questionNumber": 17,
+              "question": "True or False: According to NU President Jeffrey Gold, state appropriations, when adjusted for inflation, are 74% of what they were in 2016.",
+              "answerOptions": [
+                {
+                  "text": "True",
+                  "rationale": "The article directly attributes this statement about inflation-adjusted funding to President Gold.",
+                  "isCorrect": true
+                },
+                {
+                  "text": "False",
+                  "rationale": "This statement was made by President Gold to illustrate the impact of inflation on state funding.",
+                  "isCorrect": false
+                }
+              ],
+              "hint": "This quote was used to provide context for the 'stagnant state funding' claim."
+            },
+            {
+              "questionNumber": 18,
+              "question": "The laundry fire at The Courtyards started on which floor?",
+              "answerOptions": [
+                {
+                  "text": "First floor",
+                  "rationale": "The article specifies a different floor.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "Second floor",
+                  "rationale": "The article specifies a different floor.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "Third floor",
+                  "rationale": "The article states the fire started 'on the third floor laundry room'.",
+                  "isCorrect": true
+                },
+                {
+                  "text": "Top floor",
+                  "rationale": "The article specifies the third floor, but not whether it is the top floor.",
+                  "isCorrect": false
+                }
+              ],
+              "hint": "The fire was in the laundry room of the residence hall."
+            },
+            {
+              "questionNumber": 19,
+              "question": "Who is the president of the UNL AAUP chapter?",
+              "answerOptions": [
+                {
+                  "text": "Rodney Bennett",
+                  "rationale": "Rodney Bennett is the UNL Chancellor proposing the cuts.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "Bonnie Fox Garrity",
+                  "rationale": "She is the national AAUP financial analyst who conducted the report.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "Jeffrey Gold",
+                  "rationale": "Jeffrey Gold is the NU President.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "Sarah Zuckerman",
+                  "rationale": "The article quotes Sarah Zuckerman and identifies her as the UNL AAUP President.",
+                  "isCorrect": true
+                }
+              ],
+              "hint": "This person said, 'Budgets are an expression of values'."
+            },
+            {
+              "questionNumber": 20,
+              "question": "True or False: Professor Alloway, who is retiring, stated it is a valid option for the university to simply say 'we're not going to do' the budget cuts.",
+              "answerOptions": [
+                {
+                  "text": "True",
+                  "rationale": "Professor Alloway said the opposite, stating 'it's just not an option for us to say, we're not going to do that'.",
+                  "isCorrect": false
+                },
+                {
+                  "text": "False",
+                  "rationale": "He expressed concern but called himself a 'realist,' saying 'it's just not an option for us to say, we're not going to do that'.",
+                  "isCorrect": true
+                }
+              ],
+              "hint": "This professor called himself a 'realist' when discussing the looming budget shortfall."
+            }
+        ];
+
+        // --- 2. APP STATE VARIABLES ---
+        let currentQuestions = []; // The 5 random questions for this round
+        let currentQuestionIndex = 0;
+        let score = 0;
+        const totalQuestions = 5;
+
+        // --- 3. DOM ELEMENT REFERENCES ---
+        const quizContainer = document.getElementById('quiz-container');
+        const resultsContainer = document.getElementById('results-container');
+        const questionHeaderEl = document.getElementById('question-header');
+        const questionTextEl = document.getElementById('question-text');
+        const answerOptionsEl = document.getElementById('answer-options');
+        const feedbackEl = document.getElementById('feedback');
+        const nextBtn = document.getElementById('next-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const scoreTextEl = document.getElementById('score-text');
+
+        // --- 4. CORE FUNCTIONS ---
+
+        /**
+         * Shuffles an array in place using the Fisher-Yates algorithm
+         * @param {Array} array Array to be shuffled
+         */
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        /**
+         * Starts a new quiz
+         */
+        function startQuiz() {
+            // Reset state
+            score = 0;
+            currentQuestionIndex = 0;
+            
+            // Select 5 random questions
+            shuffleArray(allQuestions);
+            currentQuestions = allQuestions.slice(0, totalQuestions);
+            
+            // Show quiz, hide results
+            quizContainer.classList.remove('hidden');
+            resultsContainer.classList.add('hidden');
+            
+            // Display the first question
+            showQuestion();
+        }
+
+        /**
+         * Displays the current question and answer options
+         */
+        function showQuestion() {
+            // Reset UI for the new question
+            resetState();
+            
+            const question = currentQuestions[currentQuestionIndex];
+            
+            // Update question text
+            questionHeaderEl.innerText = `Question ${currentQuestionIndex + 1} of ${totalQuestions}`;
+            questionTextEl.innerText = question.question;
+            
+            // Create and display answer buttons
+            question.answerOptions.forEach(option => {
+                const button = document.createElement('button');
+                button.innerText = option.text;
+                button.classList.add('option-btn');
+                
+                // Add click listener to check the answer
+                button.addEventListener('click', () => selectAnswer(button, option.isCorrect, option.rationale));
+                
+                answerOptionsEl.appendChild(button);
+            });
+        }
+
+        /**
+         * Resets the UI state before showing a new question
+         */
+        function resetState() {
+            // Clear old answer options
+            answerOptionsEl.innerHTML = '';
+            
+            // Hide feedback and next button
+            feedbackEl.style.display = 'none';
+            feedbackEl.classList.remove('correct', 'incorrect');
+            nextBtn.style.display = 'none';
+        }
+
+        /**
+         * Handles the user's answer selection
+         * @param {HTMLElement} selectedButton - The button element the user clicked
+         * @param {boolean} isCorrect - Whether the selected option is correct
+         * @param {string} rationale - The explanation for the answer
+         */
+        function selectAnswer(selectedButton, isCorrect, rationale) {
+            // Disable all buttons to prevent changing answer
+            Array.from(answerOptionsEl.children).forEach(button => {
+                button.disabled = true;
+                
+                // Show the correct answer
+                const option = currentQuestions[currentQuestionIndex].answerOptions.find(opt => opt.text === button.innerText);
+                if (option.isCorrect) {
+                    button.classList.add('correct');
+                }
+            });
+
+            // Update score and style the selected button
+            if (isCorrect) {
+                score++;
+                selectedButton.classList.add('correct');
+                feedbackEl.classList.add('correct');
+            } else {
+                selectedButton.classList.add('incorrect');
+                feedbackEl.classList.add('incorrect');
+            }
+            
+            // Show feedback rationale
+            feedbackEl.innerText = rationale;
+            feedbackEl.style.display = 'block';
+            
+            // Show the "Next" or "See Results" button
+            if (currentQuestionIndex < totalQuestions - 1) {
+                nextBtn.innerText = 'Next Question';
+            } else {
+                nextBtn.innerText = 'See Results';
+            }
+            nextBtn.style.display = 'block';
+        }
+
+        /**
+         * Shows the final results screen
+         */
+        function showResults() {
+            // Hide quiz, show results
+            quizContainer.classList.add('hidden');
+            resultsContainer.classList.remove('hidden');
+            
+            // Display final score
+            scoreTextEl.innerText = `You got ${score} out of ${totalQuestions} correct!`;
+        }
+
+        /**
+         * Moves to the next question or shows results if quiz is over
+         */
+        function handleNextButton() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < totalQuestions) {
+                showQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        // --- 5. EVENT LISTENERS ---
+        nextBtn.addEventListener('click', handleNextButton);
+        restartBtn.addEventListener('click', startQuiz);
+
+        // --- 6. START THE QUIZ ---
+        // Automatically start the quiz when the page loads
+        startQuiz();
+
+    </script>
+</body>
+</html>
